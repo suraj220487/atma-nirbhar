@@ -5,6 +5,7 @@ import { useFonts } from '@use-expo/font';
 import { Asset } from "expo-asset";
 import { Block, GalioProvider } from "galio-framework";
 import { NavigationContainer } from "@react-navigation/native";
+import * as Speech from 'expo-speech';
 
 // Before rendering any navigation stack
 import { enableScreens } from "react-native-screens";
@@ -47,6 +48,41 @@ export default props => {
     return Promise.all([...cacheImages(assetImages)]);
   }
 
+  function dialogFlowIntegration() {
+    const ACCESS_TOKEN = '';
+
+    try {
+       const response = fetch(`https://dialogflow.googleapis.com/v2/projects/abcd-303017/agent/sessions/123:detectIntent`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': `Bearer ${ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          "query_input": {
+            "text": {
+              "text": "What can you do",
+              "language_code": "en-US"
+            }
+          }
+        })
+      }).then((response) => response.json()).then((json) => {
+        console.log(json.queryResult.fulfillmentText);
+        Speech.stop();
+
+        Speech.speak(json.queryResult.fulfillmentText);
+    }).catch((error) => {
+        console.error(error);
+    });
+      // let responseJson = response.json();
+      // console.log(responseJson);
+  }catch(error) {
+  console.error(error);
+}
+
+}
+
   function _handleLoadingError(error) {
     // In this case, you might want to report the error to your error
     // reporting service, for example Sentry
@@ -61,6 +97,7 @@ export default props => {
     return (
       <AppLoading
         startAsync={_loadResourcesAsync}
+        startAsync={dialogFlowIntegration}
         onError={_handleLoadingError}
         onFinish={_handleFinishLoading}
       />
