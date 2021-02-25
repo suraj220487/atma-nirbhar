@@ -16,7 +16,7 @@ import * as Speech from 'expo-speech';
 import { GiftedChat } from 'react-native-gifted-chat';
 
 import { dialogflowConfig } from './env';
-
+import { Dialogflow_V2 } from "react-native-dialogflow";
 
 // Before rendering any navigation stack
 import { enableScreens } from "react-native-screens";
@@ -189,6 +189,7 @@ function cacheImages(images) {
 let window = Dimensions.get('window');
 const contentHeight = window.height - 80;
 const avatarBot = "";
+const resultjson = {};
 
 export default class GiftedChatApp extends Component {
   static navigationOptions = {
@@ -199,6 +200,12 @@ export default class GiftedChatApp extends Component {
     super(props);
     this.getDialogFlow = this.getDialogFlow.bind(this);
     this.state = { gifted: [], answers: [], height: contentHeight };
+    Dialogflow_V2.setConfiguration(
+      dialogflowConfig.client_email,
+      dialogflowConfig.private_key,
+      Dialogflow_V2.LANG_GERMAN,
+      dialogflowConfig.project_id
+  );
   }
 
   componentDidMount () {
@@ -246,65 +253,95 @@ export default class GiftedChatApp extends Component {
     this.getDialogFlow(messages[0].text)
   }
 
+  handleGoogleResponse (result) {
+    let answers = [
+      {
+        _id: this.state.gifted.length + 1,
+        text: result.queryResult.fulfillmentText,
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'DB Virtual Assistant',
+          avatar: avatarBot,
+        },
+        image: "",
+        imageProps: {
+           height: 200,
+           width: 200
+        }
+      },
+    ]
+    console.log(answers);
+    Speech.stop()
+    Speech.speak(result.queryResult.fulfillmentText)
+
+    this.setState(previousState => ({
+      gifted: GiftedChat.append(previousState.gifted, answers),
+    }))
+
+  }
+
   async getDialogFlow(msg) {
     const ACCESS_TOKEN = dialogflowConfig.access_token;
-
+    
     try {
-       const response = await fetch(`https://dialogflow.googleapis.com/v2/projects/abcd-303017/agent/sessions/123:detectIntent`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json; charset=utf-8',
-          'Authorization': `Bearer ${ACCESS_TOKEN}`,
-        },
-        body: JSON.stringify({
-          "query_input": {
-            "text": {
-              "text": msg,
-              "language_code": "en-US"
-            }
-          }
-        })
-      })
-      let responseJson = await response.json();
+      Dialogflow_V2.requestQuery(msg, result=> this.handleGoogleResponse(result)
+      , error=>console.log(error));
+    //    const response = await fetch(`https://dialogflow.googleapis.com/v2/projects/abcd-303017/agent/sessions/123:detectIntent`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Accept': 'application/json',
+    //       'Content-Type': 'application/json; charset=utf-8',
+    //       'Authorization': `Bearer ${ACCESS_TOKEN}`,
+    //     },
+    //     body: JSON.stringify({
+    //       "query_input": {
+    //         "text": {
+    //           "text": msg,
+    //           "language_code": "en-US"
+    //         }
+    //       }
+    //     })
+    //   })
+    //   let responseJson = await response.json();
 
-      const imageUrl = "";
+    //   const imageUrl = "";
 
-      // responseJson.result.fulfillment.messages.map((item, i) => {
-      //    if (item.payload !== undefined){
-      //       if(item.payload.imageUrl !== undefined) {
-      //         imageUrl = item.payload.imageUrl;
-      //       }
-      //   }
-      //   return imageUrl
-      // })
+    //   // responseJson.result.fulfillment.messages.map((item, i) => {
+    //   //    if (item.payload !== undefined){
+    //   //       if(item.payload.imageUrl !== undefined) {
+    //   //         imageUrl = item.payload.imageUrl;
+    //   //       }
+    //   //   }
+    //   //   return imageUrl
+    //   // })
+      
+    //   let answers = [
+    //     {
+    //       _id: this.state.gifted.length + 1,
+    //       text: responseJson.queryResult.fulfillmentText,
+    //       createdAt: new Date(),
+    //       user: {
+    //         _id: 2,
+    //         name: 'DB Virtual Assistant',
+    //         avatar: avatarBot,
+    //       },
+    //       image: imageUrl,
+    //       imageProps: {
+    //          height: 200,
+    //          width: 200
+    //       }
+    //     },
+    //   ]
 
-      let answers = [
-        {
-          _id: this.state.gifted.length + 1,
-          text: responseJson.queryResult.fulfillmentText,
-          createdAt: new Date(),
-          user: {
-            _id: 2,
-            name: 'DB Virtual Assistant',
-            avatar: avatarBot,
-          },
-          image: imageUrl,
-          imageProps: {
-             height: 200,
-             width: 200
-          }
-        },
-      ]
+      // Speech.stop()
+      // Speech.speak(responseJson.queryResult.fulfillmentText)
 
-      Speech.stop()
-      Speech.speak(responseJson.queryResult.fulfillmentText)
+      // this.setState(previousState => ({
+      //   gifted: GiftedChat.append(previousState.gifted, answers),
+      // }))
 
-      this.setState(previousState => ({
-        gifted: GiftedChat.append(previousState.gifted, answers),
-      }))
-
-      return responseJson;
+      return "";
 
     } catch(error) {
       console.error(error);
@@ -343,37 +380,3 @@ export default class GiftedChatApp extends Component {
 
 
 
-// function dialogFlowIntegration() {
-//   const ACCESS_TOKEN = dialogflowConfig.access_token;
-
-//   try {
-//      const response = fetch(`https://dialogflow.googleapis.com/v2/projects/abcd-303017/agent/sessions/123:detectIntent`, {
-//       method: 'POST',
-//       headers: {
-//         'Accept': 'application/json',
-//         'Content-Type': 'application/json; charset=utf-8',
-//         'Authorization': `Bearer ${ACCESS_TOKEN}`,
-//       },
-//       body: JSON.stringify({
-//         "query_input": {
-//           "text": {
-//             "text": "What can you do",
-//             "language_code": "en-US"
-//           }
-//         }
-//       })
-//     }).then((response) => response.json()).then((json) => {
-//       console.log(json.queryResult.fulfillmentText);
-//       Speech.stop();
-
-//       Speech.speak(json.queryResult.fulfillmentText);
-//   }).catch((error) => {
-//       console.error(error);
-//   });
-//     // let responseJson = response.json();
-//     // console.log(responseJson);
-// }catch(error) {
-// console.error(error);
-// }
-
-// }
